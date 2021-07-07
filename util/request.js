@@ -10,6 +10,10 @@ class Request {
     this.res = res;
   }
 
+  updateDomain(platform) {
+    this.domain = hostMap[platform];
+  }
+
   request = async (obj) => {
     try {
       if (typeof obj === 'string') {
@@ -20,15 +24,19 @@ class Request {
       }
       obj.method = obj.method || 'get';
 
-      let { url, data, trueUrl } = obj;
+      let { url, data, trueUrl, domain } = obj;
 
-      url = `${this.domain}/${url}`;
+      url = `${domain || this.domain}/${url}`;
 
       trueUrl && (url = trueUrl);
 
+      delete this.req.headers['content-type'];
+      delete this.req.headers['Content-Type'];
       if (obj.method === 'get') {
         obj.url = StringHelper.changeUrlQuery(data, url);
         delete obj.data;
+      } else {
+        obj.url = url;
       }
 
       obj.headers = this.req.headers;
@@ -42,7 +50,7 @@ class Request {
       if (err.message.indexOf('timeout') > -1) {
         return {};
       }
-      this.res.send(err.response.data);
+      this.res.send(err.message);
     }
   }
 }

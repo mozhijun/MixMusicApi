@@ -8,9 +8,15 @@ const Request = require('./util/request');
 const DataHandle = require('./util/dataHandle');
 const config = require('./bin/config');
 const axios = require('axios');
+const User = require('./util/user');
+const Feedback = require('./util/feedback');
+const Version = require('./util/version');
+
+const user = new User();
+const feedback = new Feedback({ user });
+const version = new Version();
 
 const app = express();
-
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
@@ -46,13 +52,18 @@ fs.readdirSync(path.join(__dirname, 'routes')).reverse().forEach(file => {
     req.query.platform = req.query['_p'].toLowerCase();
     const RouterMap = require(`./routes/${filename}`);
     Object.keys(RouterMap).forEach((path) => {
+      const R = new Request({ req, res });
       const func = (req, res, next) => RouterMap[path]({
         req,
         res,
         next,
         dataHandle: new DataHandle(req.query.platform),
         platform: req.query.platform,
-        request: new Request({ req, res }).request,
+        request: R.request,
+        R,
+        user,
+        feedback,
+        version,
       });
       router.post(path, func);
       router.get(path, func);

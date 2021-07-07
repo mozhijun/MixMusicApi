@@ -29,32 +29,32 @@ module.exports = {
             reqIds[reqIdIndex] = [];
           }
         })
-        Promise.all(reqIds.map((ids) => querySong(ids.join(','))))
-          .then((resArr) => {
-            resArr.forEach(({ songs }) => {
-              songs.forEach((s) => trackMap[s.id] = { ...s, ...(trackMap[s.id] || {}) })
-            })
-            result.playlist.tracks = result.playlist.trackIds.map(s => trackMap[s.id]).filter((s) => s.name);
-            const data = dataHandle.playlist(result.playlist);
-            return res.send({
-              result: 100,
-              data,
-            });
-          });
-        break;
+        const resArr = await Promise.all(reqIds.map((ids) => querySong(ids.join(','))))
+
+        resArr.forEach(({ songs }) => {
+          songs.forEach((s) => trackMap[s.id] = { ...s, ...(trackMap[s.id] || {}) })
+        })
+        result.playlist.tracks = result.playlist.trackIds.map(s => trackMap[s.id]).filter((s) => s.name);
+        const data = dataHandle.playlist(result.playlist);
+        res && res.send({
+          result: 100,
+          data,
+        });
+        return data;
       case 'qq':
         url = 'songlist';
         result = await request({
           url,
           data: req.query,
         });
-        return res.send({
+        res && res.send({
           result: 100,
           data: {
             // result,
             ...(dataHandle.playlist(result.data)),
           },
         });
+        return resData;
       case 'migu':
         url = 'playlist';
         let totalPage = 1;
@@ -78,10 +78,11 @@ module.exports = {
           } catch (err) {}
           nowPage += 1;
         }
-        return res.send({
+        res && res.send({
           result: 100,
           data: resData,
         })
+        return resData;
     }
   },
 
@@ -90,11 +91,14 @@ module.exports = {
     let result;
     switch (platform) {
       case '163':
-        result = await request('recommend/songs');
+        result = await request({
+          url: 'recommend/songs',
+          data: req.query,
+        });
         if (result.code === 200) {
           return res.send({
             result: 100,
-            data: dataHandle.song(result.recommend),
+            data: dataHandle.song(result.data.dailySongs),
           })
         }
         return res.send({
@@ -130,7 +134,7 @@ module.exports = {
           data: dataHandle.playlist(result.recommend || result.result || []),
         })
       case 'qq':
-        result = await request('recommend/playlist');
+        result = await request('recommend/playlist/u');
         return res.send({
           result: 100,
           data: dataHandle.playlist(result.data.list || []),
@@ -175,6 +179,45 @@ module.exports = {
           result: 100,
           data: [],
         });
+    }
+  },
+
+  // 心动模式
+  async['/heart']({ req, res, request, dataHandle, platform }) {
+    const { id, pid } = req.query;
+    let resultData;
+    switch (platform) {
+      case '163':
+        const { data } = (await request(`playmode/intelligence/list?id=${id}&pid=${pid}`).catch(() => ({ data: []})))
+        resultData = {
+          result: 100,
+          data: dataHandle.song(data.map(({ songInfo }) => songInfo))
+        }
+        break;
+      default:
+        resultData = {
+          result: 100,
+          data: [],
+        }
+        break;
+    }
+
+    return res.send(resultData);
+  },
+
+  async['/collect']({ req, res, request, dataHandle, platform}) {
+    const { id, sub } = req.query;
+
+    switch (platform) {
+      case '163':
+        const data = await request(`playlist/subscribe?id=${id}&t=${sub}`)
+        res.send({
+          result: Number(data.code) === 200 ? 100 : 200,
+        });
+        break;
+      case 'qq':
+        res.send(await request(`songlist/collect?id=${id}&op=${Number(sub) ? 1 : 2}`))
+        break;
     }
   },
 };

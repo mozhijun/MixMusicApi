@@ -77,10 +77,22 @@ npm start
 
 `/song`: 获取歌曲信息
 
-`/record`: 歌曲播放记录（仅支持网易云）
+`/song/record`: 歌曲播放记录（仅支持网易云）
+
+`/song/playlist`: 对歌单中歌曲增删操作
 
 ### 播放链接
 
 `/url`: 获取歌曲播放链接
 
 `/url/batch`: 批量获取歌曲播放链接
+
+### 评论操作
+
+`/comment`: 获取评论
+
+`/comment/send`: 发送评论
+
+`/comment/like`: 点赞/取消 评论
+
+`/comment/del`: 删除评论
